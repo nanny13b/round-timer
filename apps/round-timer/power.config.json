@@ -1,0 +1,10 @@
+{
+  "appDisplayName": "自訂回合計時小幫手",
+  "description": "可自訂回合總時間、三個倒數提示點並支援本機手動響鈴的單頁計時工具。",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "Default",
+  "localAppUrl": "http://localhost:5173/",
+  "connectionReferences": {},
+  "databaseReferences": {}
+}
