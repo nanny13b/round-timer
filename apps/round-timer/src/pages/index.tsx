@@ -145,6 +145,8 @@ export default function HomePage() {
         return audioContext.state === 'running';
       }
       const selected = SOUND_OPTIONS.find((sound: typeof SOUND_OPTIONS[number]) => sound.id === selectedSound);
+      console.log('BASE_URL:', import.meta.env.BASE_URL);
+      console.log('Selected sound:', selected);
       if (!selected || !('url' in selected)) return false;
       const audio = new Audio(selected.url);
       audio.preload = 'auto';
@@ -153,7 +155,7 @@ export default function HomePage() {
       return true;
     } catch (error: unknown) {
       setAudioReady(false);
-      toast.error('無法啟用音訊，請確認 SharePoint 存取權與瀏覽器音效設定');
+      toast.error('無法啟用音訊，請確認瀏覽器音效設定');
       return false;
     }
   }, [getAudioContext, selectedSound]);
@@ -167,6 +169,8 @@ export default function HomePage() {
         playChime(audioContext);
       } else {
         const selected = SOUND_OPTIONS.find((sound: typeof SOUND_OPTIONS[number]) => sound.id === selectedSound);
+        console.log('BASE_URL:', import.meta.env.BASE_URL);
+        console.log('Selected sound:', selected);
         if (!selected || !('url' in selected)) throw new Error('Sound is unavailable');
         const audio = customAudioRef.current ?? new Audio(selected.url);
         customAudioRef.current = audio;
@@ -180,7 +184,7 @@ export default function HomePage() {
       if (manual) toast.success('正在播放測試鈴聲');
     } catch (error: unknown) {
       setAudioReady(false);
-      toast.error('無法播放這個鈴聲，請確認已登入 SharePoint，或改用內建鈴聲');
+      toast.error('無法播放這個鈴聲，請改用內建鈴聲');
     }
   }, [getAudioContext, selectedSound]);
 
