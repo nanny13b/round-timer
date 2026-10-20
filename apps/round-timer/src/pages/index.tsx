@@ -38,10 +38,10 @@ const SOUND_STORAGE_KEY = 'round-timer-sound';
 // ] as const;
 const SOUND_OPTIONS = [
   { id: 'built-in', label: '內建三聲鈴' },
-  { id: 'sound-1', label: '鈴聲-1 (default)', url: '${import.meta.env.BASE_URL}files/ring/13196.mp3' },
-  { id: 'sound-2', label: '鈴聲-2', url: '${import.meta.env.BASE_URL}files/ring/xm2407.mp3' },
-  { id: 'sound-3', label: '鈴聲-3', url: '${import.meta.env.BASE_URL}files/ring/y1164.mp3' },
-  { id: 'sound-4', label: '鈴聲-4', url: '${import.meta.env.BASE_URL}files/ring/y1319.wav' },
+  { id: 'sound-1', label: '鈴聲-1 (default)', url: `${import.meta.env.BASE_URL}files/ring/13196.mp3` },
+  { id: 'sound-2', label: '鈴聲-2', url: `${import.meta.env.BASE_URL}files/ring/xm2407.mp3` },
+  { id: 'sound-3', label: '鈴聲-3', url: `${import.meta.env.BASE_URL}files/ring/y1164.mp3` },
+  { id: 'sound-4', label: '鈴聲-4', url: `${import.meta.env.BASE_URL}files/ring/y1319.wav` },
 ] as const;
 type SoundId = typeof SOUND_OPTIONS[number]['id'];
 const DEFAULT_SETTINGS: TimerSettings = {
