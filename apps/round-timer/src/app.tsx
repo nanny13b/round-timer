@@ -21,14 +21,14 @@ function App() {
       <ErrorBoundary resetQueryCache>
         <JotaiProvider>
           <Toaster richColors />
-          <Router>
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<HomePage />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Route>
-            </Routes>
-          </Router>
+            <Router basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+              <Routes>
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<HomePage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Route>
+              </Routes>
+            </Router>
         </JotaiProvider>
       </ErrorBoundary>
     </QueryClientProvider>
