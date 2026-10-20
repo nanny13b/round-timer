@@ -111,6 +111,58 @@ const readSettings = (): TimerSettings => {
   return DEFAULT_SETTINGS;
 };
 
+const playAudioOnce = (audio: HTMLAudioElement): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const handleEnded = () => {
+      cleanup();
+      resolve();
+    };
+
+    const handleError = () => {
+      cleanup();
+      reject(new Error('Audio playback failed'));
+    };
+
+    const cleanup = () => {
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
+    };
+
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
+
+    audio.pause();
+    audio.currentTime = 0;
+
+    audio.play().catch(() => {
+      cleanup();
+      reject(new Error('Audio playback failed'));
+    });
+  });
+};
+
+const delay = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+});
+
+const playAudioRepeated = async (
+  url: string,
+  times: number,
+  intervalMs = 300
+): Promise<void> => {
+  for (let index = 0; index < times; index += 1) {
+    if (index > 0) {
+      await delay(intervalMs);
+    }
+
+    const audio = new Audio(url);
+    audio.preload = 'auto';
+
+    await audio.play();
+  }
+};
+
 export default function HomePage() {
   const [settings, setSettings] = useState<TimerSettings>(readSettings);
   const [form, setForm] = useState<SettingsForm>(() => settingsToForm(readSettings()));
@@ -160,33 +212,130 @@ export default function HomePage() {
     }
   }, [getAudioContext, selectedSound]);
 
-  const playBell = useCallback(async (manual = false): Promise<void> => {
+  //const playBell = useCallback(async (manual = false): Promise<void> => {
+  // const playBell = useCallback(
+  //     async (manual = false, times = 1): Promise<void> => {
+  //   try {
+  //     if (selectedSound === 'built-in') {
+  //       const audioContext = getAudioContext();
+  //       if (audioContext.state === 'suspended') await audioContext.resume();
+  //       if (audioContext.state !== 'running') throw new Error('AudioContext is not running');
+  //       playChime(audioContext);
+  //     } 
+  //     else 
+  //     {
+  //       const selected = SOUND_OPTIONS.find((sound: typeof SOUND_OPTIONS[number]) => sound.id === selectedSound);
+  //       console.log('BASE_URL:', import.meta.env.BASE_URL);
+  //       console.log('Selected sound:', selected);
+  //       if (!selected || !('url' in selected)) throw new Error('Sound is unavailable');
+  //       const audio = customAudioRef.current ?? new Audio(selected.url);
+  //       customAudioRef.current = audio;
+  //       audio.preload = 'auto';
+
+  //       for (let index = 0; index < times; index += 1) 
+  //       {
+  //           await playAudioOnce(audio);
+
+  //           if (index < times - 1) {
+  //             await delay(300);
+  //           }
+  //       }
+
+  //       // audio.pause();
+  //       // audio.currentTime = 0;
+  //       // await audio.play();
+  //     }
+  //     setAudioReady(true);
+  //     setPulse(true);
+  //     window.setTimeout(() => setPulse(false), 1100);
+  //     if (manual) toast.success('正在播放測試鈴聲');
+  //   } catch (error: unknown) {
+  //     setAudioReady(false);
+  //     toast.error('無法播放這個鈴聲，請改用內建鈴聲');
+  //   }
+  // }, [getAudioContext, selectedSound]);
+
+const playBell = useCallback(
+  async (manual = false, times = 1): Promise<void> => {
     try {
       if (selectedSound === 'built-in') {
         const audioContext = getAudioContext();
-        if (audioContext.state === 'suspended') await audioContext.resume();
-        if (audioContext.state !== 'running') throw new Error('AudioContext is not running');
-        playChime(audioContext);
+
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+
+        if (audioContext.state !== 'running') {
+          throw new Error('AudioContext is not running');
+        }
+
+        // 內建鈴聲
+        // times > 1 時，不等上一組播放完，間隔 300ms 再觸發下一組
+        for (let index = 0; index < times; index += 1) {
+          if (index > 0) {
+            await delay(300);
+          }
+
+          playChime(audioContext);
+        }
       } else {
-        const selected = SOUND_OPTIONS.find((sound: typeof SOUND_OPTIONS[number]) => sound.id === selectedSound);
-        console.log('BASE_URL:', import.meta.env.BASE_URL);
-        console.log('Selected sound:', selected);
-        if (!selected || !('url' in selected)) throw new Error('Sound is unavailable');
-        const audio = customAudioRef.current ?? new Audio(selected.url);
-        customAudioRef.current = audio;
-        audio.pause();
-        audio.currentTime = 0;
-        await audio.play();
+        const selected = SOUND_OPTIONS.find(
+          (sound: typeof SOUND_OPTIONS[number]) =>
+            sound.id === selectedSound
+        );
+
+        if (!selected || !('url' in selected)) {
+          throw new Error('Sound is unavailable');
+        }
+
+        // 一般提示，只播放一次時沿用既有 Audio instance
+        if (times === 1) {
+          const audio =
+            customAudioRef.current ?? new Audio(selected.url);
+
+          customAudioRef.current = audio;
+          audio.preload = 'auto';
+
+          await playAudioOnce(audio);
+        } else {
+          // 多次提示時，每一聲建立獨立 Audio instance
+          // 因此第二聲可以在第一聲尚未結束時開始播放
+          for (let index = 0; index < times; index += 1) {
+            if (index > 0) {
+              await delay(300);
+            }
+
+            const audio = new Audio(selected.url);
+            audio.preload = 'auto';
+
+            await audio.play();
+          }
+        }
       }
+
       setAudioReady(true);
       setPulse(true);
-      window.setTimeout(() => setPulse(false), 1100);
-      if (manual) toast.success('正在播放測試鈴聲');
+
+      window.setTimeout(() => {
+        setPulse(false);
+      }, 1100);
+
+      if (manual) {
+        toast.success(
+          times > 1
+            ? `正在播放 ${times} 次測試鈴聲`
+            : '正在播放測試鈴聲'
+        );
+      }
     } catch (error: unknown) {
+      console.error('Audio playback failed:', error);
+
       setAudioReady(false);
       toast.error('無法播放這個鈴聲，請改用內建鈴聲');
     }
-  }, [getAudioContext, selectedSound]);
+  },
+  [getAudioContext, selectedSound]
+);
 
   const changeSound = (value: string): void => {
     const sound = SOUND_OPTIONS.find((option: typeof SOUND_OPTIONS[number]) => option.id === value);
@@ -217,7 +366,8 @@ export default function HomePage() {
     checkpoints.forEach((checkpoint: number) => {
       if (remaining <= checkpoint && !firedAlerts.has(checkpoint) && (status === 'running' || status === 'finished')) {
         setFiredAlerts((previous: Set<number>) => new Set(previous).add(checkpoint));
-        void playBell();
+        //void playBell();
+        void playBell(false, checkpoint === 0 ? 2 : 1);
         toast.info(checkpoint === 0 ? '本回合時間到' : `剩餘 ${formatTime(checkpoint)}`);
       }
     });
