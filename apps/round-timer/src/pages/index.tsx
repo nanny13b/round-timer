@@ -29,12 +29,19 @@ interface SettingsForm {
 
 const STORAGE_KEY = 'round-timer-settings';
 const SOUND_STORAGE_KEY = 'round-timer-sound';
+// const SOUND_OPTIONS = [
+//   { id: 'built-in', label: '內建三聲鈴' },
+//   { id: 'sound-3', label: 'default', url: 'https://cclcltd.sharepoint.com/sites/Cindys/Shared%20Documents/Ring/y1164.mp3?download=1' },
+//   { id: 'sound-1', label: '01', url: 'https://cclcltd.sharepoint.com/sites/Cindys/Shared%20Documents/Ring/13196.mp3?download=1' },
+//   { id: 'sound-2', label: '02', url: 'https://cclcltd.sharepoint.com/sites/Cindys/Shared%20Documents/Ring/xm2407.mp3?download=1' },  
+//   { id: 'sound-4', label: '03', url: 'https://cclcltd.sharepoint.com/sites/Cindys/Shared%20Documents/Ring/y1319.wav?download=1' },
+// ] as const;
 const SOUND_OPTIONS = [
   { id: 'built-in', label: '內建三聲鈴' },
-  { id: 'sound-1', label: '13196.mp3', url: 'https://cclcltd.sharepoint.com/sites/Cindys/Shared%20Documents/Ring/13196.mp3?download=1' },
-  { id: 'sound-2', label: '自訂鈴聲 2', url: 'https://cclcltd.sharepoint.com/:u:/s/Cindys/IQCNx3yRP94XR7qFkxgQjkEGAQKwsPxf3SmsQgek-hSPZFM?download=1' },
-  { id: 'sound-3', label: '自訂鈴聲 3', url: 'https://cclcltd.sharepoint.com/:u:/s/Cindys/IQDe7x18JON8TYUaIONWgv0aAcWfplh0XwEpbiUBikXuA8A?download=1' },
-  { id: 'sound-4', label: '自訂鈴聲 4', url: 'https://cclcltd.sharepoint.com/:u:/s/Cindys/IQCkUIIEthPzRolcNxxIxQDmAe_NTWJzh0Bwok7G7sny3FA?download=1' },
+  { id: 'sound-1', label: '鈴聲-1 (default)', url: 'apps/round-timer/public/files/ring/13196.mp3' },
+  { id: 'sound-2', label: '鈴聲-2', url: 'apps/round-timer/public/files/ring/xm2407.mp3' },
+  { id: 'sound-3', label: '鈴聲-3', url: 'apps/round-timer/public/files/ring/y1164.mp3' },
+  { id: 'sound-4', label: '鈴聲-4', url: 'apps/round-timer/public/files/ring/y1319.wav' },
 ] as const;
 type SoundId = typeof SOUND_OPTIONS[number]['id'];
 const DEFAULT_SETTINGS: TimerSettings = {

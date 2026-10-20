@@ -21,7 +21,7 @@ function App() {
       <ErrorBoundary resetQueryCache>
         <JotaiProvider>
           <Toaster richColors />
-          <Router>
+          <Router basename="/round-timer">
             <Routes>
               <Route path="/" element={<Layout />}>
                 <Route index element={<HomePage />} />
