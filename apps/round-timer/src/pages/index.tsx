@@ -43,6 +43,8 @@ const SOUND_OPTIONS = [
   { id: 'sound-3', label: '鈴聲-3', url: `${import.meta.env.BASE_URL}files/ring/y1164.mp3` },
   { id: 'sound-4', label: '鈴聲-4', url: `${import.meta.env.BASE_URL}files/ring/y1319.wav` },
 ] as const;
+const FINAL_SOUND_URL =
+  `${import.meta.env.BASE_URL}files/ring/final.mp3`;
 type SoundId = typeof SOUND_OPTIONS[number]['id'];
 const DEFAULT_SETTINGS: TimerSettings = {
   roundSeconds: 300,
@@ -178,6 +180,7 @@ export default function HomePage() {
   const endAtRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const customAudioRef = useRef<HTMLAudioElement | null>(null);
+  const finalAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const getAudioContext = useCallback((): AudioContext => {
     if (!audioContextRef.current) {
@@ -189,28 +192,48 @@ export default function HomePage() {
   }, []);
 
   const unlockAudio = useCallback(async (): Promise<boolean> => {
-    try {
-      if (selectedSound === 'built-in') {
-        const audioContext = getAudioContext();
-        if (audioContext.state === 'suspended') await audioContext.resume();
-        setAudioReady(audioContext.state === 'running');
-        return audioContext.state === 'running';
+  try {
+    // 預先準備回合結束音效
+    const finalAudio = new Audio(FINAL_SOUND_URL);
+    finalAudio.preload = 'auto';
+    finalAudio.load();
+    finalAudioRef.current = finalAudio;
+
+    if (selectedSound === 'built-in') {
+      const audioContext = getAudioContext();
+
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
       }
-      const selected = SOUND_OPTIONS.find((sound: typeof SOUND_OPTIONS[number]) => sound.id === selectedSound);
-      console.log('BASE_URL:', import.meta.env.BASE_URL);
-      console.log('Selected sound:', selected);
-      if (!selected || !('url' in selected)) return false;
-      const audio = new Audio(selected.url);
-      audio.preload = 'auto';
-      customAudioRef.current = audio;
-      setAudioReady(true);
-      return true;
-    } catch (error: unknown) {
-      setAudioReady(false);
-      toast.error('無法啟用音訊，請確認瀏覽器音效設定');
+
+      setAudioReady(audioContext.state === 'running');
+      return audioContext.state === 'running';
+    }
+
+    const selected = SOUND_OPTIONS.find(
+      (sound: typeof SOUND_OPTIONS[number]) =>
+        sound.id === selectedSound
+    );
+
+    if (!selected || !('url' in selected)) {
       return false;
     }
-  }, [getAudioContext, selectedSound]);
+
+    const audio = new Audio(selected.url);
+    audio.preload = 'auto';
+    audio.load();
+
+    customAudioRef.current = audio;
+
+    setAudioReady(true);
+    return true;
+  } catch (error: unknown) {
+    console.error('Audio initialization failed:', error);
+    setAudioReady(false);
+    toast.error('無法啟用音訊，請確認瀏覽器音效設定');
+    return false;
+  }
+}, [getAudioContext, selectedSound]);
 
   //const playBell = useCallback(async (manual = false): Promise<void> => {
   // const playBell = useCallback(
@@ -256,7 +279,7 @@ export default function HomePage() {
   // }, [getAudioContext, selectedSound]);
 
 const playBell = useCallback(
-  async (manual = false, times = 1): Promise<void> => {
+  async (manual = false): Promise<void> => {
     try {
       if (selectedSound === 'built-in') {
         const audioContext = getAudioContext();
@@ -269,15 +292,7 @@ const playBell = useCallback(
           throw new Error('AudioContext is not running');
         }
 
-        // 內建鈴聲
-        // times > 1 時，不等上一組播放完，間隔 300ms 再觸發下一組
-        for (let index = 0; index < times; index += 1) {
-          if (index > 0) {
-            await delay(300);
-          }
-
-          playChime(audioContext);
-        }
+        playChime(audioContext);
       } else {
         const selected = SOUND_OPTIONS.find(
           (sound: typeof SOUND_OPTIONS[number]) =>
@@ -288,29 +303,13 @@ const playBell = useCallback(
           throw new Error('Sound is unavailable');
         }
 
-        // 一般提示，只播放一次時沿用既有 Audio instance
-        if (times === 1) {
-          const audio =
-            customAudioRef.current ?? new Audio(selected.url);
+        const audio =
+          customAudioRef.current ?? new Audio(selected.url);
 
-          customAudioRef.current = audio;
-          audio.preload = 'auto';
+        customAudioRef.current = audio;
+        audio.preload = 'auto';
 
-          await playAudioOnce(audio);
-        } else {
-          // 多次提示時，每一聲建立獨立 Audio instance
-          // 因此第二聲可以在第一聲尚未結束時開始播放
-          for (let index = 0; index < times; index += 1) {
-            if (index > 0) {
-              await delay(300);
-            }
-
-            const audio = new Audio(selected.url);
-            audio.preload = 'auto';
-
-            await audio.play();
-          }
-        }
+        await playAudioOnce(audio);
       }
 
       setAudioReady(true);
@@ -321,15 +320,10 @@ const playBell = useCallback(
       }, 1100);
 
       if (manual) {
-        toast.success(
-          times > 1
-            ? `正在播放 ${times} 次測試鈴聲`
-            : '正在播放測試鈴聲'
-        );
+        toast.success('正在播放測試鈴聲');
       }
     } catch (error: unknown) {
-      console.error('Audio playback failed:', error);
-
+      console.error('Alert sound playback failed:', error);
       setAudioReady(false);
       toast.error('無法播放這個鈴聲，請改用內建鈴聲');
     }
@@ -337,15 +331,54 @@ const playBell = useCallback(
   [getAudioContext, selectedSound]
 );
 
-  const changeSound = (value: string): void => {
-    const sound = SOUND_OPTIONS.find((option: typeof SOUND_OPTIONS[number]) => option.id === value);
-    if (!sound) return;
-    customAudioRef.current?.pause();
-    customAudioRef.current = null;
-    setSelectedSound(sound.id);
+const playFinalBell = useCallback(async (): Promise<void> => {
+  try {
+    const audio =
+      finalAudioRef.current ?? new Audio(FINAL_SOUND_URL);
+
+    finalAudioRef.current = audio;
+    audio.preload = 'auto';
+
+    audio.pause();
+    audio.currentTime = 0;
+
+    await audio.play();
+
+    setAudioReady(true);
+    setPulse(true);
+
+    window.setTimeout(() => {
+      setPulse(false);
+    }, 1100);
+  } catch (error: unknown) {
+    console.error('Final sound playback failed:', error);
     setAudioReady(false);
-    window.localStorage.setItem(SOUND_STORAGE_KEY, sound.id);
-  };
+    toast.error('無法播放回合結束鈴聲');
+  }
+}, []);
+
+const changeSound = (value: string): void => {
+  const sound = SOUND_OPTIONS.find(
+    (option: typeof SOUND_OPTIONS[number]) =>
+      option.id === value
+  );
+
+  if (!sound) return;
+
+  customAudioRef.current?.pause();
+  finalAudioRef.current?.pause();
+
+  customAudioRef.current = null;
+  finalAudioRef.current = null;
+
+  setSelectedSound(sound.id);
+  setAudioReady(false);
+
+  window.localStorage.setItem(
+    SOUND_STORAGE_KEY,
+    sound.id
+  );
+};
 
   useEffect(() => {
     if (status !== 'running') return;
@@ -361,17 +394,45 @@ const playBell = useCallback(
     return () => window.clearInterval(intervalId);
   }, [status]);
 
-  useEffect(() => {
-    const checkpoints = [settings.firstAlertSeconds, settings.secondAlertSeconds, 0];
-    checkpoints.forEach((checkpoint: number) => {
-      if (remaining <= checkpoint && !firedAlerts.has(checkpoint) && (status === 'running' || status === 'finished')) {
-        setFiredAlerts((previous: Set<number>) => new Set(previous).add(checkpoint));
-        //void playBell();
-        void playBell(false, checkpoint === 0 ? 2 : 1);
-        toast.info(checkpoint === 0 ? '本回合時間到' : `剩餘 ${formatTime(checkpoint)}`);
+useEffect(() => {
+  const checkpoints = [
+    settings.firstAlertSeconds,
+    settings.secondAlertSeconds,
+    0,
+  ];
+
+  checkpoints.forEach((checkpoint: number) => {
+    if (
+      remaining <= checkpoint &&
+      !firedAlerts.has(checkpoint) &&
+      (status === 'running' || status === 'finished')
+    ) {
+      setFiredAlerts(
+        (previous: Set<number>) =>
+          new Set(previous).add(checkpoint)
+      );
+
+      if (checkpoint === 0) {
+        void playFinalBell();
+      } else {
+        void playBell();
       }
-    });
-  }, [firedAlerts, playBell, remaining, settings, status]);
+
+      toast.info(
+        checkpoint === 0
+          ? '本回合時間到'
+          : `剩餘 ${formatTime(checkpoint)}`
+      );
+    }
+  });
+}, [
+  firedAlerts,
+  playBell,
+  playFinalBell,
+  remaining,
+  settings,
+  status,
+]);
 
   const progress = useMemo(
     () => Math.max(0, Math.min(100, ((settings.roundSeconds - remaining) / settings.roundSeconds) * 100)),
